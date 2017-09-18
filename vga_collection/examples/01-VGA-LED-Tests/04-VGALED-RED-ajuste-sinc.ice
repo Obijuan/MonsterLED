@@ -50,6 +50,26 @@
           }
         },
         {
+          "id": "283860a2-0f61-4ec2-a1a0-ba1e151d9772",
+          "type": "basic.input",
+          "data": {
+            "name": "in",
+            "pins": [
+              {
+                "index": "0",
+                "name": "SW1",
+                "value": "10"
+              }
+            ],
+            "virtual": false,
+            "clock": false
+          },
+          "position": {
+            "x": -352,
+            "y": 208
+          }
+        },
+        {
           "id": "4aea34fa-d414-44a1-be2b-e5de70439d77",
           "type": "basic.output",
           "data": {
@@ -88,6 +108,81 @@
           }
         },
         {
+          "id": "6603513e-2d74-4882-9660-86e6aac1107e",
+          "type": "basic.input",
+          "data": {
+            "name": "in",
+            "pins": [
+              {
+                "index": "0",
+                "name": "SW2",
+                "value": "11"
+              }
+            ],
+            "virtual": false,
+            "clock": false
+          },
+          "position": {
+            "x": -352,
+            "y": 376
+          }
+        },
+        {
+          "id": "199dcc53-368f-4d24-b347-ae226d5c3415",
+          "type": "basic.output",
+          "data": {
+            "name": "leds",
+            "range": "[7:0]",
+            "pins": [
+              {
+                "index": "7",
+                "name": "LED7",
+                "value": "104"
+              },
+              {
+                "index": "6",
+                "name": "LED6",
+                "value": "102"
+              },
+              {
+                "index": "5",
+                "name": "LED5",
+                "value": "101"
+              },
+              {
+                "index": "4",
+                "name": "LED4",
+                "value": "99"
+              },
+              {
+                "index": "3",
+                "name": "LED3",
+                "value": "98"
+              },
+              {
+                "index": "2",
+                "name": "LED2",
+                "value": "97"
+              },
+              {
+                "index": "1",
+                "name": "LED1",
+                "value": "96"
+              },
+              {
+                "index": "0",
+                "name": "LED0",
+                "value": "95"
+              }
+            ],
+            "virtual": false
+          },
+          "position": {
+            "x": 672,
+            "y": 392
+          }
+        },
+        {
           "id": "246999d9-5f3d-4451-ac6b-3ae9528e1bd9",
           "type": "basic.output",
           "data": {
@@ -110,12 +205,18 @@
           "id": "37653c30-cd19-46c2-9d49-98e8e019eb7e",
           "type": "basic.code",
           "data": {
-            "code": "reg [8:0] CounterX;\nreg [8:0] CounterY;\n\n//-- Cambiar el valor de CounterX para hacer un ajuste\n//-- fino de la frecuencia\nwire CounterXmaxed = (CounterX==390);\n\nalways @(posedge clk)\nif(CounterXmaxed)\n  CounterX <= 0;\nelse\n  CounterX <= CounterX + 1;\n\nalways @(posedge clk)\nif(CounterXmaxed)\n    CounterY <= CounterY + 1;\n    \n    \nreg vga_HS, vga_VS;\nalways @(posedge clk)\nbegin\n  vga_HS <= (CounterX[8:3]==0);   // active for 16 clocks\n  vga_VS <= (CounterY==0);   // active for 768 clocks\nend\n\nassign vga_h_sync = ~vga_HS;\nassign vga_v_sync = ~vga_VS; \n\nwire monocrome;\n\nassign monocrome = (CounterX>170) && (CounterX <= 210);\n\nassign R = monocrome;\nassign G = 0; //monocrome; \nassign B = 0; //monocrome;\n\n",
+            "code": "reg [8:0] CounterX;\nreg [8:0] CounterY;\n\n//-- Cambiar el valor de CounterX para hacer un ajuste\n//-- fino de la frecuencia\nreg [8:0] ParamX = 390;\nreg [31:0] retardo = 0;\n\nwire CounterXmaxed = (CounterX==ParamX);\n\nalways @(posedge clk)\nif(CounterXmaxed)\n  CounterX <= 0;\nelse\n  CounterX <= CounterX + 1;\n\nalways @(posedge clk)\nbegin\n    if (retardo[23])\n    begin\n        if (incx) ParamX <= ParamX + 1;\n        if (decx) ParamX <= ParamX - 1;\n        retardo <= 0;\n    end\n    else retardo = retardo + 1;\nend\n\n//always @(posedge incx) ParamX <= ParamX + 1;  \n//always @(posedge decx) ParamX <= ParamX - 1;  \n  \n\nalways @(posedge clk)\nif(CounterXmaxed)\n    CounterY <= CounterY + 1;\n    \n    \nreg vga_HS, vga_VS;\nalways @(posedge clk)\nbegin\n  vga_HS <= (CounterX[8:3]==0);   // active for 16 clocks\n  vga_VS <= (CounterY==0);   // active for 768 clocks\nend\n\nassign vga_h_sync = ~vga_HS;\nassign vga_v_sync = ~vga_VS; \n\nwire monocrome;\n\nassign monocrome = (CounterX>170) && (CounterX <= 210);\n\nassign R = monocrome;\nassign G = 0; //monocrome; \nassign B = 0; //monocrome;\n\n",
             "params": [],
             "ports": {
               "in": [
                 {
                   "name": "clk"
+                },
+                {
+                  "name": "incx"
+                },
+                {
+                  "name": "decx"
                 }
               ],
               "out": [
@@ -133,6 +234,11 @@
                 },
                 {
                   "name": "vga_v_sync"
+                },
+                {
+                  "name": "ParamX",
+                  "range": "[8:0]",
+                  "size": 9
                 }
               ]
             }
@@ -213,15 +319,52 @@
             "block": "246999d9-5f3d-4451-ac6b-3ae9528e1bd9",
             "port": "in"
           }
+        },
+        {
+          "source": {
+            "block": "6603513e-2d74-4882-9660-86e6aac1107e",
+            "port": "out"
+          },
+          "target": {
+            "block": "37653c30-cd19-46c2-9d49-98e8e019eb7e",
+            "port": "decx"
+          }
+        },
+        {
+          "source": {
+            "block": "283860a2-0f61-4ec2-a1a0-ba1e151d9772",
+            "port": "out"
+          },
+          "target": {
+            "block": "37653c30-cd19-46c2-9d49-98e8e019eb7e",
+            "port": "incx"
+          }
+        },
+        {
+          "source": {
+            "block": "37653c30-cd19-46c2-9d49-98e8e019eb7e",
+            "port": "ParamX"
+          },
+          "target": {
+            "block": "199dcc53-368f-4d24-b347-ae226d5c3415",
+            "port": "in"
+          },
+          "vertices": [
+            {
+              "x": 488,
+              "y": 448
+            }
+          ],
+          "size": 9
         }
       ]
     },
     "state": {
       "pan": {
-        "x": 443.0568,
-        "y": 349.7314
+        "x": 197.7898,
+        "y": 59.9784
       },
-      "zoom": 0.9689
+      "zoom": 0.8914
     }
   },
   "dependencies": {}
